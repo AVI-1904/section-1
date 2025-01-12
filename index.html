@@ -1,20 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>html section</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Three Chance Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #6dd5fa, #2980b9);
+      color: white;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 2.5em;
+    }
+
+    #game-area {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+
+    #game-area div {
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background-color: #ffffff1a;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      flex: 1;
+      max-width: 300px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      background-color: #27ae60;
+      color: white;
+      border-radius: 5px;
+      transition: transform 0.2s ease-in-out, background-color 0.2s;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #2ecc71;
+      transform: scale(1.1);
+    }
+
+    #result-area {
+      margin-top: 30px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #progress-bar {
+      width: 100%;
+      max-width: 300px;
+      height: 10px;
+      background-color: #ddd;
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 20px auto;
+    }
+
+    #progress {
+      height: 100%;
+      width: 0;
+      background-color: #27ae60;
+      transition: width 0.3s ease;
+    }
+
+    #leaderboard {
+      margin-top: 30px;
+      background-color: #ffffff1a;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .dark-theme {
+      background: linear-gradient(to right, #2c3e50, #4ca1af);
+      color: white;
+    }
+
+    .dark-theme button {
+      background-color: #16a085;
+    }
+  </style>
 </head>
 <body>
-    <h1 class="centre">my page heading </h1>
-    <h3>level 3 heading</h3>
-    <h6>smallest heading</h6>
-    <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Fugit, odio.</p>
-    <a href="https://www.w3schools.com/css/css_align.asp">open w3school</a>
-    <img src="weather.webp" alt="this is image alternativ text of your image" width="600x600">
-    <br>
-    <img src="https://images.unsplash.com/photo-1638602612226-55fd638475c9?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8c291cmNlfGVufDB8fDB8fHww" alt="" width="600x600">
-   
+  <div class="container">
+    <h1>Three Chance Game</h1>
+    <button id="theme-toggle">Toggle Dark/Light Theme</button>
+    <div id="game-area">
+      <div id="player-x">
+        <h2>Player X</h2>
+        <button id="player-x-btn">Generate Number</button>
+        <p>Numbers: <span id="player-x-numbers">-</span></p>
+        <p>Sum: <span id="player-x-sum">0</span></p>
+        <div id="progress-bar">
+          <div id="progress-x"></div>
+        </div>
+      </div>
+      <div id="player-y">
+        <h2>Player Y</h2>
+        <button id="player-y-btn" disabled>Generate Number</button>
+        <p>Numbers: <span id="player-y-numbers">-</span></p>
+        <p>Sum: <span id="player-y-sum">0</span></p>
+        <div id="progress-bar">
+          <div id="progress-y"></div>
+        </div>
+      </div>
+    </div>
+    <div id="result-area" class="hidden">
+      <h2 id="winner"></h2>
+      <button id="restart-btn">Restart Game</button>
+    </div>
+    <div id="leaderboard">
+      <h3>Leaderboard</h3>
+      <ul id="leaderboard-list"></ul>
+    </div>
+    <audio id="click-sound" src="click.mp3"></audio>
+  </div>
 
+  <script>
+    const playerXButton = document.getElementById('player-x-btn');
+    const playerYButton = document.getElementById('player-y-btn');
+    const playerXNumbers = document.getElementById('player-x-numbers');
+    const playerYNumbers = document.getElementById('player-y-numbers');
+    const playerXSum = document.getElementById('player-x-sum');
+    const playerYSum = document.getElementById('player-y-sum');
+    const resultArea = document.getElementById('result-area');
+    const winnerText = document.getElementById('winner');
+    const restartButton = document.getElementById('restart-btn');
+    const progressX = document.getElementById('progress-x');
+    const progressY = document.getElementById('progress-y');
+    const leaderboardList = document.getElementById('leaderboard-list');
+    const clickSound = document.getElementById('click-sound');
+    const themeToggle = document.getElementById('theme-toggle');
+
+    let xNumbers = [];
+    let yNumbers = [];
+    let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+
+    function generateRandomNumber() {
+      return Math.floor(Math.random() * 10) + 1;
+    }
+
+    function playSound() {
+      clickSound.play();
+    }
+
+    function updatePlayerNumbers(player, number) {
+      if (player === 'X') {
+        xNumbers.push(number);
+        playerXNumbers.textContent = xNumbers.join(', ');
+        playerXSum.textContent = xNumbers.reduce((sum, num) => sum + num, 0);
+        progressX.style.width = `${(xNumbers.length / 3) * 100}%`;
+        if (xNumbers.length === 3) {
+          playerXButton.disabled = true;
+          playerYButton.disabled = false;
+        }
+      } else {
+        yNumbers.push(number);
+        playerYNumbers.textContent = yNumbers.join(', ');
+        playerYSum.textContent = yNumbers.reduce((sum, num) => sum + num, 0);
+        progressY.style.width = `${(yNumbers.length / 3) * 100}%`;
+        if (yNumbers.length === 3) {
+          playerYButton.disabled = true;
+          declareWinner();
+        }
+      }
+    }
+
+    function declareWinner() {
+      const xTotal = xNumbers.reduce((sum, num) => sum + num, 0);
+      const yTotal = yNumbers.reduce((sum, num) => sum + num, 0);
+      let winner;
+      if (xTotal > yTotal) {
+        winner = 'Player X Wins!';
+      } else if (yTotal > xTotal) {
+        winner = 'Player Y Wins!';
+      } else {
+        winner = "It's a Tie!";
+      }
+      winnerText.textContent = winner;
+      leaderboard.push(winner);
+      localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+      updateLeaderboard();
+      resultArea.classList.remove('hidden');
+    }
+
+    function updateLeaderboard() {
+      leaderboardList.innerHTML = leaderboard
+        .map((result, index) => `<li>Game ${index + 1}: ${result}</li>`)
+        .join('');
+    }
+
+    function restartGame() {
+      xNumbers = [];
+      yNumbers = [];
+      playerXNumbers.textContent = '-';
+      playerYNumbers.textContent = '-';
+      playerXSum.textContent = '0';
+      playerYSum.textContent = '0';
+      progressX.style.width = '0';
+      progressY.style.width = '0';
+      playerXButton.disabled = false;
+      playerYButton.disabled = true;
+      resultArea.classList.add('hidden');
+    }
+
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-theme');
+    });
+
+    playerXButton.addEventListener('click', () => {
+      const number = generateRandomNumber();
+      playSound();
+      updatePlayerNumbers('X', number);
+    });
+
+    playerYButton.addEventListener('click', () => {
+      const number = generateRandomNumber();
+      playSound();
+      updatePlayerNumbers('Y', number);
+    });
+
+    restartButton.addEventListener('click', restartGame);
+
+    updateLeaderboard();
+  </script>
 </body>
 </html>
